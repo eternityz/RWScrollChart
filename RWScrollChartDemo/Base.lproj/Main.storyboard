@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="7706" systemVersion="14E46" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" initialViewController="DzM-Ke-jfb">
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="7703"/>
+        <capability name="Constraints with non-1.0 multipliers" minToolsVersion="5.1"/>
+    </dependencies>
+    <scenes>
+        <!--View Controller-->
+        <scene sceneID="0hd-PR-4i9">
+            <objects>
+                <viewController id="HrH-cQ-QfV" customClass="ViewController" customModule="RWScrollChartDemo" customModuleProvider="target" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="JTg-lH-PRw"/>
+                        <viewControllerLayoutGuide type="bottom" id="vfw-Ho-6TA"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="EE5-eW-hOm">
+                        <rect key="frame" x="0.0" y="0.0" width="600" height="536"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <subviews>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Ojd-lK-pMl" customClass="RWScrollChart" customModule="RWScrollChartDemo" customModuleProvider="target">
+                                <rect key="frame" x="0.0" y="0.0" width="600" height="268"/>
+                                <color key="backgroundColor" white="0.33333333333333331" alpha="1" colorSpace="calibratedWhite"/>
+                            </view>
+                        </subviews>
+                        <color key="backgroundColor" red="0.93725490196078431" green="0.93725490196078431" blue="0.95686274509803926" alpha="1" colorSpace="calibratedRGB"/>
+                        <constraints>
+                            <constraint firstItem="Ojd-lK-pMl" firstAttribute="leading" secondItem="EE5-eW-hOm" secondAttribute="leading" id="b0I-qu-eQG"/>
+                            <constraint firstAttribute="height" secondItem="Ojd-lK-pMl" secondAttribute="height" multiplier="2" id="fGw-iU-pnj"/>
+                            <constraint firstItem="Ojd-lK-pMl" firstAttribute="top" secondItem="EE5-eW-hOm" secondAttribute="top" id="tZ0-s7-pER"/>
+                            <constraint firstAttribute="trailing" secondItem="Ojd-lK-pMl" secondAttribute="trailing" id="udA-OC-XjA"/>
+                        </constraints>
+                    </view>
+                    <navigationItem key="navigationItem" id="74U-b7-gw9"/>
+                    <connections>
+                        <outlet property="chart" destination="Ojd-lK-pMl" id="zQC-74-vNt"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="QdY-wt-BwA" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="1429" y="-240"/>
+        </scene>
+        <!--Navigation Controller-->
+        <scene sceneID="vBV-YW-EhC">
+            <objects>
+                <navigationController automaticallyAdjustsScrollViewInsets="NO" id="DzM-Ke-jfb" sceneMemberID="viewController">
+                    <toolbarItems/>
+                    <navigationBar key="navigationBar" contentMode="scaleToFill" translucent="NO" id="FTp-be-rib">
+                        <rect key="frame" x="0.0" y="0.0" width="320" height="44"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                    </navigationBar>
+                    <nil name="viewControllers"/>
+                    <connections>
+                        <segue destination="HrH-cQ-QfV" kind="relationship" relationship="rootViewController" id="vzQ-nW-9TM"/>
+                    </connections>
+                </navigationController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="HnJ-JJ-vLB" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="690" y="-240"/>
+        </scene>
+    </scenes>
+</document>
