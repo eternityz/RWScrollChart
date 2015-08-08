@@ -10,8 +10,7 @@ import UIKit
 
 struct RWSCAppearance {
     var backgroundColor = UIColor.clearColor()
-    var topMargin: CGFloat = 0.0
-    var bottomMargin: CGFloat = 5.0
+    var contentMargins = UIEdgeInsets(top: 0.0, left: 15.0, bottom: 5.0, right: 15.0)
     
     var backgroundLineWidth: CGFloat = 0.5
     var horizontalLineColor = UIColor(white: 1.0, alpha: 0.1)
@@ -37,6 +36,7 @@ struct RWSCAppearance {
     var focusColor = UIColor.whiteColor()
     var focusStrokeWidth: CGFloat = 1.0
     var focusNeedleLength: CGFloat = 5.0
+    var focusBubbleRoundedRadius: CGFloat = 2.0
     
     var showAxis = true
     var axisTextFont = UIFont.systemFontOfSize(10.0)

@@ -27,8 +27,8 @@ struct RWSCLayout {
     var rightScrollBound: CGFloat? = nil
     
     func chartAreaVerticalRangeForViewHeight(height: CGFloat) -> (start: CGFloat, end: CGFloat) {
-        let start = appearance.topMargin + titleAreaHeight + appearance.backgroundLineWidth
-        let end = height - focusTextAreaHeight - appearance.backgroundLineWidth - appearance.bottomMargin
+        let start = appearance.contentMargins.top + titleAreaHeight + appearance.backgroundLineWidth
+        let end = height - focusTextAreaHeight - appearance.backgroundLineWidth - appearance.contentMargins.bottom
         return (start, end)
     }
     
@@ -138,8 +138,8 @@ struct RWSCLayout {
         
         let viewWidth = viewSize.width
         
-        contentLeftMargin = 0.0
-        contentRightMargin = 0.0
+        contentLeftMargin = appearance.contentMargins.left
+        contentRightMargin = appearance.contentMargins.right
         
         var sectionFrames: [CGRect] = []
         var sectionTitleWidths: [CGFloat] = []
@@ -172,7 +172,7 @@ struct RWSCLayout {
                 }
             }
             
-            sectionFrames.append(CGRect(x: x, y: appearance.topMargin, width: sectionWidth, height: viewSize.height - appearance.topMargin - appearance.bottomMargin))
+            sectionFrames.append(CGRect(x: x, y: appearance.contentMargins.top, width: sectionWidth, height: viewSize.height - appearance.contentMargins.top - appearance.contentMargins.bottom))
             sectionTitleWidths.append(titleWidth)
             
             x += sectionWidth
@@ -188,7 +188,7 @@ struct RWSCLayout {
             contentWidth += viewSize.width
         }
         contentSize = CGSize(width: contentWidth, height: viewSize.height)
-        contentInset = UIEdgeInsets(top: 0.0, left: contentLeftMargin, bottom: 0.0, right: contentRightMargin)
+        contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
         
         if appearance.showFocus {
             focusTextAreaHeight = appearance.focusTextFont.lineHeight * CGFloat(appearance.focusTextLineCount) + 2 * appearance.focusTextMargin.y + appearance.focusNeedleLength

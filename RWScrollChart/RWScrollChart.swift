@@ -251,26 +251,8 @@ extension RWScrollChart {
 }
 
 extension RWScrollChart: UIScrollViewDelegate {
-    private func _adjustContentOffset() {
-        var newOffset = bounds.origin
-        
-        if let rightScrollBound = layout.rightScrollBound
-            where bounds.minX > rightScrollBound {
-                newOffset.x = rightScrollBound
-                self.setContentOffset(newOffset, animated: true)
-        }
-    }
-    
     func scrollViewDidScroll(scrollView: UIScrollView) {
         setNeedsDisplay()
-    }
-    
-    func scrollViewDidEndDragging(scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        _adjustContentOffset()
-    }
-    
-    func scrollViewDidEndDecelerating(scrollView: UIScrollView) {
-        _adjustContentOffset()
     }
 }
 
