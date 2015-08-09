@@ -135,8 +135,9 @@ extension RWScrollChart {
             
         } // if let visibleSections
         
-        if focusVisible {
-            _drawFocus(focus, indexPath: focusedItem!.indexPath, inRect: rect, context: context)
+        if let focusedItem = focusedItem,
+            let text = dataSource.textForItemAtIndexPath(focusedItem.indexPath) {
+                _drawFocus(focus, text: text, inRect: rect, context: context)
         }
         
         if let axis = dataSource.axis where appearance.showAxis {
@@ -144,7 +145,7 @@ extension RWScrollChart {
         }
     }
     
-    private func _drawFocus(position: CGFloat, indexPath: NSIndexPath, inRect rect: CGRect, context: CGContextRef) {
+    private func _drawFocus(position: CGFloat, text: String, inRect rect: CGRect, context: CGContextRef) {
         let needle = CGPoint(x: position, y: layout.chartAreaVerticalRangeForViewHeight(bounds.height).end + appearance.backgroundLineWidth)
         appearance.focusColor.setFill()
         CGContextBeginPath(context)
@@ -158,7 +159,6 @@ extension RWScrollChart {
             progress = bounds.minX / (contentSize.width - bounds.width)
         }
         
-        let text = dataSource.textForItemAtIndexPath(indexPath) ?? " "
         let textAttr = [NSFontAttributeName: appearance.focusTextFont, NSForegroundColorAttributeName: appearance.focusTextColor]
         var textSize = (text as NSString).sizeWithAttributes(textAttr)
         textSize.width += appearance.focusTextMargin.x * 2.0

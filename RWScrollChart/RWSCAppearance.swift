@@ -33,6 +33,7 @@ struct RWSCAppearance {
     var focusTextBackgroundColor = UIColor.whiteColor()
     var focusTextMargin = CGPoint(x: 6.0, y: 1.0)
     var focusTextLineCount = 1
+    var focusIndicatorRadius: CGFloat = 4.0
     var focusColor = UIColor.whiteColor()
     var focusStrokeWidth: CGFloat = 1.0
     var focusNeedleLength: CGFloat = 5.0

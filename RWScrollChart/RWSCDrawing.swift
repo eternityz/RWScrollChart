@@ -17,9 +17,14 @@ extension RWSCLineDataSet: RWSCDataSetDrawable {
     func drawSections(sections: Range<Int>, inChart chart: RWScrollChart, withRect rect: CGRect, context: CGContextRef) {
         // find index paths needed to draw
         
+        // 0. expand to +/- 1 sections
+        let sectionRangeStart = max(0, sections.startIndex - 1)
+        let sectionRangeEnd = min(sections.endIndex + 1, chart.dataSource.numberOfSections())
+        let sectionRange = sectionRangeStart..<sectionRangeEnd
+        
         // 1. gather all index paths that have valid data
         var indexPaths: [NSIndexPath] = []
-        for section in 0..<chart.dataSource.numberOfSections() {
+        for section in sectionRange {
             for item in 0..<chart.dataSource.numberOfItemsInSection(section) {
                 let indexPath = NSIndexPath(forItem: item, inSection: section)
                 if let _ = pointAtIndexPath(indexPath) {
@@ -28,9 +33,9 @@ extension RWSCLineDataSet: RWSCDataSetDrawable {
             }
         }
         
-        // 2. find visible items range 
+        // 2. find visible items range
         let indexPathsIndices = Array(0..<indexPaths.count)
-        var (firstVisibile, _) = indexPathsIndices.binarySearch { toCheck in
+        var (firstVisible, _) = indexPathsIndices.binarySearch { toCheck in
             let indexPath = indexPaths[toCheck]
             let midFrame = chart.layout.frameForItemAtIndexPath(indexPath, withViewHeight: chart.bounds.height)
             if midFrame.maxX > rect.minX {
@@ -55,23 +60,35 @@ extension RWSCLineDataSet: RWSCDataSetDrawable {
         
         // 3. expand 2 items each before / after visible items
         for _ in 1...2 {
-            firstVisibile = max(0, firstVisibile - 1)
+            firstVisible = max(0, firstVisible - 1)
             lastVisible = min(lastVisible + 1, indexPaths.count)
         }
         
-        // extract points to draw
-        let points = map(indexPaths[firstVisibile..<lastVisible]) { indexPath -> CGPoint in
-            let itemFrame = chart.layout.frameForItemAtIndexPath(indexPath, withViewHeight: chart.bounds.height)
-            let ratio = self.pointAtIndexPath(indexPath)!
-            let x = itemFrame.midX
-            let y = itemFrame.maxY - itemFrame.height * ratio
-            return CGPoint(x: x, y: y)
+        // 4. group index paths into non-adjacent groups
+        let indexPathsIndexGroups = split(Array(firstVisible..<lastVisible)) { i -> Bool in
+            if i == firstVisible {
+                return false
+            }
+            
+            return indexPaths[i].section - indexPaths[i - 1].section > 1
+        }
+        
+        // 5. convert to point groups
+        let pointGroups = map(indexPathsIndexGroups) { group -> [CGPoint] in
+            map(group) { indexPathsIndex in
+                let indexPath = indexPaths[indexPathsIndex]
+                let itemFrame = chart.layout.frameForItemAtIndexPath(indexPath, withViewHeight: chart.bounds.height)
+                let ratio = self.pointAtIndexPath(indexPath)!
+                let x = itemFrame.midX
+                let y = itemFrame.maxY - itemFrame.height * ratio
+                return CGPoint(x: x, y: y)
+            }
         }
         
         // draw lines
         lineColor.setStroke()
         
-        if points.count > 1 {
+        for points in pointGroups {
             var bezier: UIBezierPath?
             if smoothed {
                 bezier = _interpolatePointsUsingHermite(points)
@@ -82,6 +99,15 @@ extension RWSCLineDataSet: RWSCDataSetDrawable {
             }
             bezier?.lineWidth = lineWidth
             bezier?.stroke()
+            
+            if let fillColor = fillColor where points.count > 1 {
+                let y0 = chart.layout.chartAreaVerticalRangeForViewHeight(chart.bounds.height).end
+                bezier?.addLineToPoint(CGPoint(x: points.last!.x, y: y0))
+                bezier?.addLineToPoint(CGPoint(x: points.first!.x, y: y0))
+                bezier?.closePath()
+                fillColor.setFill()
+                bezier?.fill()
+            }
         }
         
     }
@@ -93,7 +119,7 @@ extension RWSCLineDataSet: RWSCDataSetDrawable {
         }
         
         let point = CGPoint(x: frame.midX, y: frame.maxY - frame.height * ratio!)
-        let radius = min(chart.appearance.itemWidth / 2.0, lineWidth * 4.0)
+        let radius = chart.appearance.focusIndicatorRadius // min(chart.appearance.itemWidth / 2.0, lineWidth * 4.0)
         let rect = CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2.0, height: radius * 2.0)
         chart.appearance.focusColor.setFill()
         CGContextFillEllipseInRect(context, rect)

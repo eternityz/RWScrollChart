@@ -19,6 +19,7 @@ struct RWSCLineDataSet: RWSCDataSetType {
     var lineColor = UIColor.whiteColor()
     var smoothed = true
     var showFocus = true
+    var fillColor: UIColor? = UIColor(red: 0.0, green: 0.5, blue: 1.0, alpha: 0.2)
     
     init(pointAtIndexPath: DataProvider) {
         self.pointAtIndexPath = pointAtIndexPath
