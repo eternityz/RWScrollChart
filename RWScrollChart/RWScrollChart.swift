@@ -10,6 +10,7 @@ import UIKit
 
 class RWScrollChart: UIScrollView {
     // namespace
+    typealias DataSetType = RWSCDataSetType
     typealias DataSource = RWSCDataSource
     typealias Appearance = RWSCAppearance
     typealias DataSetDrawable = RWSCDataSetDrawable
@@ -20,84 +21,79 @@ class RWScrollChart: UIScrollView {
     
     typealias Layout = RWSCLayout
     
-    // user provided information
-    var dataSource = DataSource() {
-        didSet {
-            reloadData()
-        }
-    }
+    var dataSource = DataSource()
     
-    var appearance: Appearance = Appearance() {
-        didSet {
-            _applyAppearance()
-            reloadData()
+    var appearance = Appearance()
+    
+    lazy var layout: Layout = Layout(dataSource: self.dataSource, appearance: self.appearance, viewSize: self.bounds.size)
+    
+    private var _viewHeight: CGFloat = 0.0
+    
+    private var _drawingHints: [RWSCDataSetDrawingHint?] = []
+    private let _calculationQueue = NSOperationQueue()
+    
+    func reloadDataWithCompletion(completion: (Void -> Void)?) {
+        _calculationQueue.addOperationWithBlock { [weak self] in
+            if let strongSelf = self {
+                strongSelf.layout = Layout(dataSource: strongSelf.dataSource, appearance: strongSelf.appearance, viewSize: strongSelf.bounds.size)
+                strongSelf._prepareDrawingHints()
+                NSOperationQueue.mainQueue().addOperationWithBlock {
+                    strongSelf._applyAppearance()
+                    completion?()
+                }
+            }
         }
     }
     
     func reloadData() {
-        _invalidateLayout()
+        reloadDataWithCompletion(nil)
     }
     
-    var layout: Layout {
-        if let layout = _layout {
-            return layout
-        }
-        _layout = Layout(dataSource: dataSource, appearance: appearance, viewSize: bounds.size)
-        return _layout!
+    private func _prepareDrawingHints() {
+        _drawingHints = map(dataSource.dataSets) { ($0 as? DataSetDrawable)?.drawingHintForChart(self) }
     }
     
     func scrollToItemAtIndexPath(indexPath: NSIndexPath, animated: Bool) {
         setContentOffset(CGPoint(x: layout.scrollOffsetForItemAtIndexPath(indexPath, withViewSize: bounds.size), y: 0), animated: animated)
     }
     
-    // internal
-    private var _layout: Layout? {
-        didSet {
-            if let layout = _layout {
-                contentSize = layout.contentSize
-                contentInset = layout.contentInset
-            } else {
-                contentSize = CGSizeZero
-                contentInset = UIEdgeInsetsZero
-            }
-        }
-    }
-    
-    private func _invalidateLayout() {
-        _layout = nil
-        setNeedsDisplay()
-        
-        NSOperationQueue.mainQueue().addOperationWithBlock {
-            var offset: CGFloat
-            switch self.appearance.initialPosition {
-            case .FirstItem: offset = 0.0
-            case .LastItem: offset = self.layout.contentSize.width - self.bounds.width
-            }
-            self.setContentOffset(CGPoint(x: offset, y: 0), animated: false)
-        }
-    }
-    
     private func _applyAppearance() {
+        contentSize = layout.contentSize
+        contentInset = layout.contentInset
         backgroundColor = appearance.backgroundColor
         showsHorizontalScrollIndicator = false
+        var offset: CGFloat
+        switch appearance.initialPosition {
+        case .FirstItem: offset = 0.0
+        case .LastItem: offset = self.layout.contentSize.width - self.bounds.width
+        }
+        setContentOffset(CGPoint(x: offset, y: 0), animated: false)
         setNeedsDisplay()
     }
     
     required init(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
         delegate = self
+        self._calculationQueue.maxConcurrentOperationCount = 1
         _applyAppearance()
     }
     
     override init(frame: CGRect) {
         super.init(frame: frame)
         delegate = self
+        self._calculationQueue.maxConcurrentOperationCount = 1
         _applyAppearance()
     }
-    
 }
 
 extension RWScrollChart {
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if _viewHeight != bounds.height {
+            _viewHeight = bounds.height
+            reloadData()
+        }
+    }
     
     override func drawRect(rect: CGRect) {
         let context = UIGraphicsGetCurrentContext()
@@ -122,12 +118,13 @@ extension RWScrollChart {
                 focusedItem = layout.itemForFocusPosition(focus, visibleSections: visibleSections, viewBounds: bounds)
             }
         
-            
-            for dataSet in dataSource.dataSets {
+            for iDataSet in 0..<dataSource.dataSets.count {
+                let dataSet = dataSource.dataSets[iDataSet]
+                let drawingHint = _drawingHints[iDataSet]
                 if let drawable = dataSet as? DataSetDrawable {
-                    drawable.drawSections(visibleSections, inChart: self, withRect: rect, context: context)
+                    drawable.drawInChart(self, withRect: rect, visibleSections: visibleSections, context: context, drawingHint: drawingHint)
                     if let focusedItem = focusedItem where dataSet.showFocus {
-                        let drawn = drawable.drawFocusAtIndexPath(focusedItem.indexPath, withItemFrame: focusedItem.itemFrame, inChart: self, context: context)
+                        let drawn = drawable.drawFocusAtIndexPath(focusedItem.indexPath, withItemFrame: focusedItem.itemFrame, inChart: self, context: context, drawingHint: drawingHint)
                         focusVisible = focusVisible || drawn
                     }
                 }
@@ -273,18 +270,65 @@ enum ArrayBinarySearchCheckResult {
 }
 
 extension Array {
-    func binarySearch(check: T -> ArrayBinarySearchCheckResult) -> (index: Int, matched: Bool) {
-        var low = 0
-        var high = self.count - 1
+    private func _binarySearchByCheckingIndex(indexRange: Range<Int>, check: (index: Int) -> ArrayBinarySearchCheckResult) -> (index: Int, matched: Bool) {
+        var low = indexRange.startIndex
+        var high = indexRange.endIndex - 1
         while low <= high {
             let mid = (low + high) / 2
-            switch check(self[mid]) {
+            switch check(index: mid) {
             case .Match: return (mid, true)
             case .ContinueLeft: high = mid - 1
             case .ContinueRight: low = mid + 1
             }
         }
         return (low, false)
+    }
+    
+    func binarySearch(check: T -> ArrayBinarySearchCheckResult) -> (index: Int, matched: Bool) {
+        return _binarySearchByCheckingIndex(0..<self.count) { check(self[$0]) }
+    }
+    
+    func indexRangeByBinarySearch(check: T -> ArrayBinarySearchCheckResult) -> Range<Int>? {
+        typealias CheckResult = ArrayBinarySearchCheckResult
+        
+        let resultWithNeighbors = { (index: Int) -> (curr: CheckResult, prev: CheckResult?, next: CheckResult?) in
+            let curr = check(self[index])
+            let prev: CheckResult? = (index > 0 ? check(self[index - 1]) : nil)
+            let next: CheckResult? = (index + 1 < self.count ? check(self[index + 1]) : nil)
+            return (curr, prev, next)
+        }
+        
+        let (left, leftMatched) = _binarySearchByCheckingIndex(0..<self.count) { index in
+            let (curr, prev, next) = resultWithNeighbors(index)
+            switch curr {
+            case .ContinueLeft, .ContinueRight: return curr
+            case .Match:
+                switch prev {
+                case .None, .Some(.ContinueRight): return .Match
+                case .Some(.Match): return .ContinueLeft
+                case .Some(.ContinueLeft): fatalError("invalid order")
+                }
+            }
+        }
+        
+        if !leftMatched {
+            return nil
+        }
+        
+        let (right, _) = _binarySearchByCheckingIndex(left..<self.count) { index in
+            let (curr, prev, next) = resultWithNeighbors(index)
+            switch curr {
+            case .ContinueLeft, .ContinueRight: return curr
+            case .Match:
+                switch next {
+                case .None, .Some(.ContinueLeft): return .Match
+                case .Some(.Match): return .ContinueRight
+                case .Some(.ContinueRight): fatalError("invalid order")
+                }
+            }
+        }
+        
+        return left...right
     }
     
     func insertionIndexOf(element: T, isAscending: (T, T) -> Bool) -> Int {

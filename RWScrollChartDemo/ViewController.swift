@@ -31,7 +31,11 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         
         barData = makeDataSetRatios()
-        lineData = makeDataSetRatios()
+        lineData = map(makeDataSetRatios()) { section in
+            map(section) {
+                0.5 * $0 + 0.2
+            }
+        }
         
         var appearance = RWScrollChart.Appearance()
         appearance.backgroundColor = UIColor.darkGrayColor()
@@ -45,7 +49,7 @@ class ViewController: UIViewController {
         
         var lineDataSet = RWScrollChart.LineDataSet(
             pointAtIndexPath: { indexPath in
-                return self.lineData[indexPath.section][indexPath.item] * 0.5 + 0.2
+                return self.lineData[indexPath.section][indexPath.item]
             }
         )
         lineDataSet.showFocus = true
@@ -68,6 +72,7 @@ class ViewController: UIViewController {
         
         chart.appearance = appearance
         chart.dataSource = dataSource
+        chart.reloadData()
     }
 }
 
