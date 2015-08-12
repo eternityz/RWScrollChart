@@ -33,23 +33,30 @@ class RWScrollChart: UIScrollView {
     private var _drawingHints: [RWSCDataSetDrawingHint?] = []
     private let _calculationQueue = NSOperationQueue()
     
-    func reloadDataWithCompletion(completion: (Void -> Void)?) {
-        _isReloading = true
-        _calculationQueue.addOperationWithBlock { [weak self] in
-            if let strongSelf = self {
-                strongSelf.layout = Layout(dataSource: strongSelf.dataSource, appearance: strongSelf.appearance, viewSize: strongSelf.bounds.size)
-                strongSelf._prepareDrawingHints()
+    private class _ReloadOperation: NSOperation {
+        weak var chart: RWScrollChart?
+        
+        init(chart: RWScrollChart) {
+            self.chart = chart
+        }
+        
+        override func main() {
+            if let chart = chart {
+                chart.layout = Layout(dataSource: chart.dataSource, appearance: chart.appearance, viewSize: chart.bounds.size)
+                chart._prepareDrawingHints()
                 NSOperationQueue.mainQueue().addOperationWithBlock {
-                    strongSelf._applyAppearance()
-                    strongSelf._isReloading = false
-                    completion?()
+                    chart._applyAppearance()
+                    chart.setNeedsDisplay()
                 }
             }
         }
     }
     
+    private var _reloadOperation: NSOperation? = nil
+    
     func reloadData() {
-        reloadDataWithCompletion(nil)
+        _reloadOperation = _ReloadOperation(chart: self)
+        _calculationQueue.addOperation(_reloadOperation!)
     }
     
     private func _prepareDrawingHints() {
@@ -90,17 +97,13 @@ class RWScrollChart: UIScrollView {
 }
 
 extension RWScrollChart {
-    override func layoutSubviews() {
-        super.layoutSubviews()
-    }
-    
     override func drawRect(rect: CGRect) {
         if _viewHeight != bounds.height {
             _viewHeight = bounds.height
             reloadData()
         }
         
-        if _isReloading {
+        if let reloadOp = _reloadOperation where !reloadOp.finished {
             return
         }
         
