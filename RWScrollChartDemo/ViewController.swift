@@ -49,6 +49,9 @@ class ViewController: UIViewController {
         
         var lineDataSet = RWScrollChart.LineDataSet(
             pointAtIndexPath: { indexPath in
+                if indexPath.section % 2 == 1 {
+                    return nil
+                }
                 return self.lineData[indexPath.section][indexPath.item]
             }
         )

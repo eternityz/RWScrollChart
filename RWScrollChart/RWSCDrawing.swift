@@ -335,12 +335,20 @@ private func _interpolateControlPointssUsingHermite(points: [CGPoint]) -> [RWSCL
 }
 
 private func _divideNonAdjacentIndexPathGroups(indexPaths: [NSIndexPath]) -> [Range<Int>] {
-    let indexes = split(Array(0..<indexPaths.count)) { i -> Bool in
-        if i == 0 {
-            return false
-        }
-        return indexPaths[i].section - indexPaths[i - 1].section > 1
+    if indexPaths.count == 0 {
+        return []
     }
     
-    return map(indexes) { $0.startIndex ..< $0.endIndex }
+    var result: [Range<Int>] = []
+    var last = 0...0
+    for i in 1..<indexPaths.count {
+        if indexPaths[i].section - indexPaths[i - 1].section > 1 {
+            result += [last]
+            last = i...i
+        }
+        last = last.startIndex...i
+    }
+    result += [last]
+    
+    return result
 }
