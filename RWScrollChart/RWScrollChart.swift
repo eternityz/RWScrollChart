@@ -27,18 +27,21 @@ class RWScrollChart: UIScrollView {
     
     lazy var layout: Layout = Layout(dataSource: self.dataSource, appearance: self.appearance, viewSize: self.bounds.size)
     
-    private var _viewHeight: CGFloat = 0.0
+    private var _viewHeight: CGFloat = 0.0 // automatically reload data when view height changed
+    private var _isReloading = true
     
     private var _drawingHints: [RWSCDataSetDrawingHint?] = []
     private let _calculationQueue = NSOperationQueue()
     
     func reloadDataWithCompletion(completion: (Void -> Void)?) {
+        _isReloading = true
         _calculationQueue.addOperationWithBlock { [weak self] in
             if let strongSelf = self {
                 strongSelf.layout = Layout(dataSource: strongSelf.dataSource, appearance: strongSelf.appearance, viewSize: strongSelf.bounds.size)
                 strongSelf._prepareDrawingHints()
                 NSOperationQueue.mainQueue().addOperationWithBlock {
                     strongSelf._applyAppearance()
+                    strongSelf._isReloading = false
                     completion?()
                 }
             }
@@ -89,13 +92,18 @@ class RWScrollChart: UIScrollView {
 extension RWScrollChart {
     override func layoutSubviews() {
         super.layoutSubviews()
+    }
+    
+    override func drawRect(rect: CGRect) {
         if _viewHeight != bounds.height {
             _viewHeight = bounds.height
             reloadData()
         }
-    }
-    
-    override func drawRect(rect: CGRect) {
+        
+        if _isReloading {
+            return
+        }
+        
         let context = UIGraphicsGetCurrentContext()
         
         if let axis = dataSource.axis where appearance.showAxis {
