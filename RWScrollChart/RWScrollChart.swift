@@ -285,7 +285,6 @@ extension RWScrollChart: UIScrollViewDelegate {
     }
     
     func scrollViewDidScroll(scrollView: UIScrollView) {
-        println("offset: \(bounds.origin.x) leftCompensation: \(layout.leftCompensation) \(contentSize.width - layout.leftCompensation)")
         setNeedsDisplay()
     }
     
