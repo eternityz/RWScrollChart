@@ -23,6 +23,8 @@ class ViewController: UIViewController {
     lazy var sections: [Int] = map(Array(0..<10)) { _ in
         Int(arc4random()) % 30 + 1
     }
+
+    // lazy var sections: [Int] = [0, 4]
     
     var barData: [[CGFloat]] = []
     var lineData: [[CGFloat]] = []

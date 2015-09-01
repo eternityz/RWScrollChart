@@ -8,6 +8,12 @@
 
 import UIKit
 
+protocol RWSCDrawRectWatcherType: class {
+    func chartWillStartDrawRect(chart: RWScrollChart)
+    func chartDidEndDrawRect(chart: RWScrollChart)
+}
+
+
 protocol RWSCDataSetDrawingHint { }
 
 struct RWSCLineDrawingHint: RWSCDataSetDrawingHint {

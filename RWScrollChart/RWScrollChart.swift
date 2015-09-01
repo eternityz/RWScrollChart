@@ -21,17 +21,23 @@ class RWScrollChart: UIScrollView {
     
     typealias Layout = RWSCLayout
     
+    typealias DrawRectWatcherType = RWSCDrawRectWatcherType
+    
     var dataSource = DataSource()
     
     var appearance = Appearance()
     
     lazy var layout: Layout = Layout(dataSource: self.dataSource, appearance: self.appearance, viewSize: self.bounds.size)
     
+    weak var drawRectWatcher: DrawRectWatcherType?
+    
     private var _viewHeight: CGFloat = 0.0 // automatically reload data when view height changed
     private var _isReloading = true
     
     private var _drawingHints: [RWSCDataSetDrawingHint?] = []
-    private let _calculationQueue = NSOperationQueue()
+    private let _reloadQueue = NSOperationQueue()
+    
+    var reloadQueue: NSOperationQueue? = nil
     
     private class _ReloadOperation: NSOperation {
         weak var chart: RWScrollChart?
@@ -44,9 +50,10 @@ class RWScrollChart: UIScrollView {
             if let chart = chart {
                 chart.layout = Layout(dataSource: chart.dataSource, appearance: chart.appearance, viewSize: chart.bounds.size)
                 chart._prepareDrawingHints()
-                NSOperationQueue.mainQueue().addOperationWithBlock {
+                dispatch_sync(dispatch_get_main_queue()) {
                     chart._applyAppearance()
                     chart.setNeedsDisplay()
+                    chart._reloadOperation = nil
                 }
             }
         }
@@ -54,9 +61,14 @@ class RWScrollChart: UIScrollView {
     
     private var _reloadOperation: NSOperation? = nil
     
-    func reloadData() {
+    func reloadDataInQueue(queue: NSOperationQueue) {
+        _viewHeight = bounds.height
         _reloadOperation = _ReloadOperation(chart: self)
-        _calculationQueue.addOperation(_reloadOperation!)
+        queue.addOperation(_reloadOperation!)
+    }
+    
+    func reloadData() {
+        reloadDataInQueue(reloadQueue ?? _reloadQueue)
     }
     
     private func _prepareDrawingHints() {
@@ -68,6 +80,7 @@ class RWScrollChart: UIScrollView {
     }
     
     private func _applyAppearance() {
+        alwaysBounceHorizontal = true
         contentSize = layout.contentSize
         contentInset = layout.contentInset
         backgroundColor = appearance.backgroundColor
@@ -84,28 +97,31 @@ class RWScrollChart: UIScrollView {
     required init(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
         delegate = self
-        self._calculationQueue.maxConcurrentOperationCount = 1
+        self._reloadQueue.maxConcurrentOperationCount = 1
         _applyAppearance()
     }
     
     override init(frame: CGRect) {
         super.init(frame: frame)
         delegate = self
-        self._calculationQueue.maxConcurrentOperationCount = 1
+        self._reloadQueue.maxConcurrentOperationCount = 1
         _applyAppearance()
     }
+    
 }
 
 extension RWScrollChart {
     override func drawRect(rect: CGRect) {
-        if _viewHeight != bounds.height {
-            _viewHeight = bounds.height
-            reloadData()
-        }
-        
         if let reloadOp = _reloadOperation where !reloadOp.finished {
             return
         }
+        
+        if _viewHeight != bounds.height {
+            reloadData()
+            return
+        }
+        
+        drawRectWatcher?.chartWillStartDrawRect(self)
         
         let context = UIGraphicsGetCurrentContext()
         
@@ -151,6 +167,8 @@ extension RWScrollChart {
         if let axis = dataSource.axis where appearance.showAxis {
             _drawAxisText(axis, inRect: rect, context: context)
         }
+        
+        drawRectWatcher?.chartDidEndDrawRect(self)
     }
     
     private func _drawFocus(position: CGFloat, text: String, inRect rect: CGRect, context: CGContextRef) {
@@ -259,8 +277,26 @@ extension RWScrollChart {
 }
 
 extension RWScrollChart: UIScrollViewDelegate {
+    func _fixOffset() {
+        if let leftScrollBound = layout.leftScrollBound
+            where bounds.origin.x < leftScrollBound {
+                setContentOffset(CGPoint(x: leftScrollBound, y: 0), animated: true)
+        }
+    }
+    
     func scrollViewDidScroll(scrollView: UIScrollView) {
+        println("offset: \(bounds.origin.x) leftCompensation: \(layout.leftCompensation) \(contentSize.width - layout.leftCompensation)")
         setNeedsDisplay()
+    }
+    
+    func scrollViewDidEndDragging(scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            _fixOffset()
+        }
+    }
+    
+    func scrollViewDidEndDecelerating(scrollView: UIScrollView) {
+        _fixOffset()
     }
 }
 

@@ -10,7 +10,7 @@ import UIKit
 
 struct RWSCAppearance {
     var backgroundColor = UIColor.clearColor()
-    var contentMargins = UIEdgeInsets(top: 0.0, left: 15.0, bottom: 5.0, right: 15.0)
+    var contentMargins = UIEdgeInsets(top: 0.0, left: 15.0, bottom: 5.0, right: 30.0)
     
     var backgroundLineWidth: CGFloat = 0.5
     var horizontalLineColor = UIColor(white: 1.0, alpha: 0.1)

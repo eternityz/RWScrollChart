@@ -24,19 +24,17 @@ struct RWSCLayout {
     let sectionTitleAreaHeight: CGFloat
     let titleAreaHeight: CGFloat // section title, padding for upmost axis
     
+    let axisWidth: CGFloat
+    let totalWidthBeforeChart: CGFloat
+    
     var rightScrollBound: CGFloat? = nil
+    var leftScrollBound: CGFloat? = nil
+    var leftCompensation: CGFloat = 0.0
     
     func chartAreaVerticalRangeForViewHeight(height: CGFloat) -> (start: CGFloat, end: CGFloat) {
         let start = appearance.contentMargins.top + titleAreaHeight + appearance.backgroundLineWidth
         let end = height - focusTextAreaHeight - appearance.backgroundLineWidth - appearance.contentMargins.bottom
         return (start, end)
-    }
-    
-    private func _axisWidthForViewWidth(viewWidth: CGFloat) -> CGFloat {
-        if !appearance.showAxis || dataSource.axis == nil {
-            return 0.0
-        }
-        return appearance.axisAreaWidthForViewWith(viewWidth)
     }
     
     func itemForFocusPosition(focus: CGFloat, visibleSections: Range<Int>, viewBounds: CGRect) -> (indexPath: NSIndexPath, itemFrame: CGRect)? {
@@ -66,13 +64,14 @@ struct RWSCLayout {
     }
     
     private func _focusParamsWithViewBounds(bounds: CGRect) -> (position: CGFloat, c1: CGFloat, c2: CGFloat, c3: CGFloat) {
+        // let itemCenterX = focusPosition, find origin.x
         // focusPosition = x + C1 + C2 * (x / C3) = x * (1 + C2 / C3) + C1
+        // x = (focusPosition - C1) / (1 + C2 / C3)
         
-        let axisFadingWidth = _axisWidthForViewWidth(bounds.width)
         let viewWidth = bounds.width
         
-        let c1 = axisFadingWidth + contentLeftMargin + appearance.itemWidth / 2.0
-        let c2 = viewWidth - contentRightMargin - contentLeftMargin - appearance.itemWidth - axisFadingWidth
+        let c1 = totalWidthBeforeChart + appearance.itemWidth / 2.0
+        let c2 = viewWidth - contentRightMargin - contentLeftMargin - appearance.itemWidth - axisWidth
         let c3 = contentSize.width - viewWidth
         
         let x = bounds.origin.x
@@ -87,9 +86,6 @@ struct RWSCLayout {
     }
     
     func scrollOffsetForItemAtIndexPath(indexPath: NSIndexPath, withViewSize size: CGSize) -> CGFloat {
-        // let itemCenterX = focusPosition, find origin.x
-        // focusPosition = x + C1 + C2 * (x / C3) = x * (1 + C2 / C3) + C1
-        // x = (focusPosition - C1) / (1 + C2 / C3)
         
         let itemCenterX = frameForItemAtIndexPath(indexPath, withViewHeight: size.height).midX
         let (_, c1, c2, c3) = _focusParamsWithViewBounds(CGRect(origin: CGPointZero, size: size))
@@ -144,10 +140,14 @@ struct RWSCLayout {
         var sectionFrames: [CGRect] = []
         var sectionTitleWidths: [CGFloat] = []
         
-        var x = contentLeftMargin
+        var axisWidth: CGFloat = 0.0
         if appearance.showAxis && dataSource.axis != nil {
-            x += appearance.axisAreaWidthForViewWith(viewWidth)
+            axisWidth = appearance.axisAreaWidthForViewWith(viewWidth)
         }
+        self.axisWidth = axisWidth
+        
+        var x = contentLeftMargin + axisWidth
+        var totalWidthBeforeChart = x
         
         for isec in 0..<dataSource.numberOfSections() {
             var titleWidth: CGFloat = 0.0
@@ -180,15 +180,25 @@ struct RWSCLayout {
         
         x += contentRightMargin
         
-        self.sectionFrames = sectionFrames
         self.sectionTitleWidths = sectionTitleWidths
         
         var contentWidth = x
-        if contentWidth < viewSize.width * 1.2 {
+        var contentInset = UIEdgeInsetsZero
+        if contentWidth < viewSize.width {
+            // contentInset = UIEdgeInsets(top: 0.0, left: viewWidth - x, bottom: 0, right: 0)
             contentWidth += viewSize.width
+            leftCompensation = viewSize.width
         }
+        self.contentInset = contentInset
+        self.totalWidthBeforeChart = totalWidthBeforeChart
         contentSize = CGSize(width: contentWidth, height: viewSize.height)
-        contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+        
+        for idx in 0..<sectionFrames.count {
+            var frame = sectionFrames[idx]
+            frame.origin.x += leftCompensation
+            sectionFrames[idx] = frame
+        }
+        self.sectionFrames = sectionFrames
         
         if appearance.showFocus {
             focusTextAreaHeight = appearance.focusTextFont.lineHeight * CGFloat(appearance.focusTextLineCount) + 2 * appearance.focusTextMargin.y + appearance.focusNeedleLength
@@ -213,6 +223,10 @@ struct RWSCLayout {
                 rightScrollBound = scrollOffsetForItemAtIndexPath(indexPath, withViewSize: viewSize)
                 // TODO: elimate dependency on view bounds of layout's funcs
             }
+        }
+        
+        if sectionFrames.count > 0 {
+            leftScrollBound = scrollOffsetForItemAtIndexPath(NSIndexPath(forItem: 0, inSection: 0), withViewSize: viewSize)
         }
     }
 }
