@@ -221,7 +221,6 @@ struct RWSCLayout {
             if item >= 0 {
                 let indexPath = NSIndexPath(forItem: item, inSection: section)
                 rightScrollBound = scrollOffsetForItemAtIndexPath(indexPath, withViewSize: viewSize)
-                // TODO: elimate dependency on view bounds of layout's funcs
             }
         }
         

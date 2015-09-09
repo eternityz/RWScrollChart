@@ -32,7 +32,6 @@ class RWScrollChart: UIScrollView {
     weak var drawRectWatcher: DrawRectWatcherType?
     
     private var _viewHeight: CGFloat = 0.0 // automatically reload data when view height changed
-    private var _isReloading = true
     
     private var _drawingHints: [RWSCDataSetDrawingHint?] = []
     private let _reloadQueue = NSOperationQueue()
@@ -54,14 +53,23 @@ class RWScrollChart: UIScrollView {
                     chart._applyAppearance()
                     chart.setNeedsDisplay()
                     chart._reloadOperation = nil
+                    chart.didFinishReloading?()
                 }
             }
         }
     }
     
+    var isReloading: Bool {
+        return (_reloadOperation != nil)
+    }
+    
+    var willStartReloading: (Void -> Void)? = nil
+    var didFinishReloading: (Void -> Void)? = nil
+    
     private var _reloadOperation: NSOperation? = nil
     
     func reloadDataInQueue(queue: NSOperationQueue) {
+        willStartReloading?()
         _viewHeight = bounds.height
         _reloadOperation = _ReloadOperation(chart: self)
         queue.addOperation(_reloadOperation!)
